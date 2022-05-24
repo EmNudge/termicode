@@ -130,6 +130,46 @@ impl<'a> App<'a> {
         }
     }
 
+    pub fn get_rendered_input(&self) -> String {
+        let mut user_input = self.input.clone();
+        user_input.insert(self.cursor_position, '▏');
+        user_input
+    } 
+
+    pub fn move_cursor(&mut self, direction: CursorMove) {
+        match direction {
+            CursorMove::LEFT => {
+                if self.cursor_position > 0 {
+                    self.cursor_position -= 1;
+                }
+            }
+            CursorMove::RIGHT => {
+                if self.cursor_position < self.input.len() {
+                    self.cursor_position += 1;
+                }
+            }
+        }
+    }
+
+}
+
+pub struct App<'a> {
+    pub search_box: SearchBox,
+    file: &'a UnicodeFile,
+    search_selection: SearchSelection,
+    pub results: Vec<&'a UnicodeData>,
+}
+
+impl<'a> App<'a> {
+    pub fn new(file: &'a UnicodeFile) -> App<'a> {
+        App {
+            search_box: SearchBox::new(),
+            file,
+            search_selection: SearchSelection::new(),
+            results: vec![],
+        }
+    }
+
     pub fn update_query(&mut self) {
         self.results = query_name(self.search_box.input.clone(), self.file)
             .take(20)
