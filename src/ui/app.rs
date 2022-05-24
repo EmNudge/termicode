@@ -1,6 +1,6 @@
-use tui::widgets::ListState;
-use crate::data::{ UnicodeFile, UnicodeData };
+use crate::data::{UnicodeData, UnicodeFile};
 use crate::query::query_name;
+use tui::widgets::ListState;
 
 enum SelectionMove {
     UP,
@@ -12,7 +12,9 @@ pub struct SearchSelection {
 
 impl SearchSelection {
     pub fn new() -> SearchSelection {
-        SearchSelection { list_state: ListState::default() }
+        SearchSelection {
+            list_state: ListState::default(),
+        }
     }
     fn selection_move(&mut self, results: &Vec<&UnicodeData>, direction: SelectionMove) {
         let len = results.len();
@@ -20,14 +22,19 @@ impl SearchSelection {
             return;
         }
 
-        self.list_state
-            .select(match self.list_state.selected() {
-                Some(i) => Some(match direction {
-                    SelectionMove::DOWN => if i == len - 1 { 0 } else { i + 1 },
-                    SelectionMove::UP => i.checked_sub(1).unwrap_or(len - 1),
-                }),
-                None => Some(0),
-            });
+        self.list_state.select(match self.list_state.selected() {
+            Some(i) => Some(match direction {
+                SelectionMove::DOWN => {
+                    if i == len - 1 {
+                        0
+                    } else {
+                        i + 1
+                    }
+                }
+                SelectionMove::UP => i.checked_sub(1).unwrap_or(len - 1),
+            }),
+            None => Some(0),
+        });
     }
     pub fn get_selection<'a>(&self, results: &Vec<&'a UnicodeData>) -> Option<&'a UnicodeData> {
         let len = results.len();
@@ -50,7 +57,10 @@ pub struct SearchBox {
 }
 impl SearchBox {
     pub fn new() -> SearchBox {
-        SearchBox { input: String::new(), cursor_position: 0 }
+        SearchBox {
+            input: String::new(),
+            cursor_position: 0,
+        }
     }
 
     pub fn add_char(&mut self, c: char) {
@@ -64,21 +74,28 @@ impl SearchBox {
         }
     }
     pub fn delete_word(&mut self) {
-        while let Some(_letter) = self.input.pop() {
-            let last_char = self.input.chars().last();
-            if let Some(letter) = last_char {
-                if letter == ' ' {
-                    break;
-                }
-            }
+        if self.input.len() > 0 {
+            let new_input: String = self
+                .input
+                .chars()
+                .rev()
+                .skip_while(|c| *c == ' ')
+                .skip_while(|c| *c != ' ')
+                .collect();
+            self.input = new_input.chars().rev().collect();
+            self.cursor_position = self.input.len();
         }
     }
 
     pub fn get_rendered_input(&self) -> String {
         let mut user_input = self.input.clone();
-        user_input.insert(self.cursor_position, '▏');
+        let cursor_position = usize::max(
+            self.cursor_position,
+            user_input.len().checked_sub(1).unwrap_or(0),
+        );
+        user_input.insert(cursor_position, '▏');
         user_input
-    } 
+    }
 
     pub fn move_cursor(&mut self, direction: CursorMove) {
         match direction {
@@ -94,7 +111,6 @@ impl SearchBox {
             }
         }
     }
-
 }
 
 pub struct App<'a> {
@@ -115,14 +131,18 @@ impl<'a> App<'a> {
     }
 
     pub fn update_query(&mut self) {
-        self.results = query_name(self.search_box.input.clone(), self.file).take(20).collect();
+        self.results = query_name(self.search_box.input.clone(), self.file)
+            .take(20)
+            .collect();
     }
 
     pub fn selection_up(&mut self) {
-        self.search_selection.selection_move(&self.results, SelectionMove::UP);
+        self.search_selection
+            .selection_move(&self.results, SelectionMove::UP);
     }
     pub fn selection_down(&mut self) {
-        self.search_selection.selection_move(&self.results, SelectionMove::DOWN);
+        self.search_selection
+            .selection_move(&self.results, SelectionMove::DOWN);
     }
     pub fn get_selection(&'a self) -> Option<&'a UnicodeData> {
         self.search_selection.get_selection(&self.results)
