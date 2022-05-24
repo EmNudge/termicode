@@ -1,10 +1,15 @@
 use std::collections::HashMap;
+use std::env;
 use tokio::io::AsyncWriteExt;
 
 pub async fn get_unicode_data() -> Result<String, Box<dyn std::error::Error>> {
     use tokio::fs;
 
-    if let Ok(bytes) = fs::read("/tmp/termicode/data.txt").await {
+    let mut temp_dir = env::temp_dir();
+    temp_dir.push("termicode");
+    temp_dir.push("data.txt");
+    
+    if let Ok(bytes) = fs::read(&temp_dir).await {
         return Ok(String::from_utf8_lossy(&bytes).to_string());
     }
 
@@ -15,9 +20,13 @@ pub async fn get_unicode_data() -> Result<String, Box<dyn std::error::Error>> {
         .text()
         .await?;
 
-    fs::create_dir("/tmp/termicode").await?;
+    temp_dir.pop();
+    if !temp_dir.exists() {
+        fs::create_dir(&temp_dir).await?;
+    }
+    temp_dir.push("data.txt");
 
-    let mut file = fs::File::create("/tmp/termicode/data.txt").await?;
+    let mut file = fs::File::create(&temp_dir).await?;
     file.write(&unicode_data.as_bytes()).await?;
 
     Ok(unicode_data)
