@@ -27,7 +27,7 @@ pub async fn get_unicode_data() -> Result<String, Box<dyn std::error::Error>> {
     temp_dir.push("data.txt");
 
     let mut file = fs::File::create(&temp_dir).await?;
-    file.write(&unicode_data.as_bytes()).await?;
+    file.write_all(&unicode_data.as_bytes()).await?;
 
     Ok(unicode_data)
 }
