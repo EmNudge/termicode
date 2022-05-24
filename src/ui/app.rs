@@ -6,7 +6,7 @@ enum SelectionMove {
     UP,
     DOWN,
 }
-struct SearchSelection {
+pub struct SearchSelection {
     list_state: ListState,
 }
 
@@ -14,7 +14,7 @@ impl SearchSelection {
     pub fn new() -> SearchSelection {
         SearchSelection { list_state: ListState::default() }
     }
-    pub fn selection_move(&mut self, results: &Vec<&UnicodeData>, direction: SelectionMove) {
+    fn selection_move(&mut self, results: &Vec<&UnicodeData>, direction: SelectionMove) {
         let len = results.len();
         if len == 0 {
             return;
@@ -40,30 +40,28 @@ impl SearchSelection {
     }
 }
 
-pub struct App<'a> {
-    pub input: String,
-    file: &'a UnicodeFile,
-    search_selection: SearchSelection,
-    pub results: Vec<&'a UnicodeData>,
+pub enum CursorMove {
+    LEFT,
+    RIGHT,
 }
-
-impl<'a> App<'a> {
-    pub fn new(file: &'a UnicodeFile) -> App<'a> {
-        App {
-            input: String::new(),
-            file,
-            search_selection: SearchSelection::new(),
-            results: vec![],
-        }
+pub struct SearchBox {
+    pub input: String,
+    pub cursor_position: usize,
+}
+impl SearchBox {
+    pub fn new() -> SearchBox {
+        SearchBox { input: String::new(), cursor_position: 0 }
     }
 
     pub fn add_char(&mut self, c: char) {
-        self.input.push(c);
-        self.update_query();
+        self.input.insert(self.cursor_position, c);
+        self.cursor_position += 1;
     }
     pub fn delete_char(&mut self) {
-        self.input.pop();
-        self.update_query();
+        if self.input.len() > 0 {
+            self.input.remove(self.cursor_position - 1);
+            self.cursor_position -= 1;
+        }
     }
     pub fn delete_word(&mut self) {
         while let Some(_letter) = self.input.pop() {
@@ -76,8 +74,48 @@ impl<'a> App<'a> {
         }
     }
 
+    pub fn get_rendered_input(&self) -> String {
+        let mut user_input = self.input.clone();
+        user_input.insert(self.cursor_position, '▏');
+        user_input
+    } 
+
+    pub fn move_cursor(&mut self, direction: CursorMove) {
+        match direction {
+            CursorMove::LEFT => {
+                if self.cursor_position > 0 {
+                    self.cursor_position -= 1;
+                }
+            }
+            CursorMove::RIGHT => {
+                if self.cursor_position < self.input.len() {
+                    self.cursor_position += 1;
+                }
+            }
+        }
+    }
+
+}
+
+pub struct App<'a> {
+    pub search_box: SearchBox,
+    file: &'a UnicodeFile,
+    search_selection: SearchSelection,
+    pub results: Vec<&'a UnicodeData>,
+}
+
+impl<'a> App<'a> {
+    pub fn new(file: &'a UnicodeFile) -> App<'a> {
+        App {
+            search_box: SearchBox::new(),
+            file,
+            search_selection: SearchSelection::new(),
+            results: vec![],
+        }
+    }
+
     pub fn update_query(&mut self) {
-        self.results = query_name(self.input.clone(), self.file).take(20).collect();
+        self.results = query_name(self.search_box.input.clone(), self.file).take(20).collect();
     }
 
     pub fn selection_up(&mut self) {

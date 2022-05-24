@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::Path;
 use tokio::io::AsyncWriteExt;
 
 pub async fn get_unicode_data() -> Result<String, Box<dyn std::error::Error>> {
@@ -7,16 +8,16 @@ pub async fn get_unicode_data() -> Result<String, Box<dyn std::error::Error>> {
     if let Ok(bytes) = fs::read("/tmp/termicode/data.txt").await {
         return Ok(String::from_utf8_lossy(&bytes).to_string());
     }
-
-    println!("Updating cache...");
-
+    
     let unicode_data = reqwest::get("https://unicode.org/Public/UNIDATA/UnicodeData.txt")
         .await?
         .text()
         .await?;
-
-    fs::create_dir("/tmp/termicode").await?;
-
+    
+    if !Path::new("/tmp/termicode").is_dir() {
+        fs::create_dir("/tmp/termicode").await?;
+    }
+    
     let mut file = fs::File::create("/tmp/termicode/data.txt").await?;
     file.write(&unicode_data.as_bytes()).await?;
 
