@@ -75,58 +75,34 @@ impl SearchBox {
     }
     pub fn delete_word(&mut self) {
         if self.input.len() > 0 {
-            let new_input: String = self
-                .input
+            let mut iter = self.input.chars().rev().enumerate().peekable();
+
+            // save all characters after our cursor
+            let mut before_cursor = String::new();
+            while let Some((i, c)) = iter.peek() {
+                if self.input.len() - 1 - i < self.cursor_position {
+                    break;
+                }
+                before_cursor.push(*c);
+                iter.next().unwrap();
+            }
+
+            let deleted_part = iter
+                .map(|(_, c)| c)
+                // if whitespace before cursor, delete all of it
+                .skip_while(|c| *c == ' ')
+                // delete until we approach the next whitespace
+                .skip_while(|c| *c != ' ');
+
+            self.input = before_cursor
+                .chars()
+                .chain(deleted_part)
+                .collect::<String>()
                 .chars()
                 .rev()
-                .skip_while(|c| *c == ' ')
-                .skip_while(|c| *c != ' ')
-                .collect();
-            self.input = new_input.chars().rev().collect();
-            self.cursor_position = self.input.len();
-        }
-    }
+                .collect::<String>();
 
-    pub fn get_rendered_input(&self) -> String {
-        let mut user_input = self.input.clone();
-        let cursor_position = usize::max(
-            self.cursor_position,
-            user_input.len().checked_sub(1).unwrap_or(0),
-        );
-        user_input.insert(cursor_position, '▏');
-        user_input
-    }
-
-    pub fn move_cursor(&mut self, direction: CursorMove) {
-        match direction {
-            CursorMove::LEFT => {
-                if self.cursor_position > 0 {
-                    self.cursor_position -= 1;
-                }
-            }
-            CursorMove::RIGHT => {
-                if self.cursor_position < self.input.len() {
-                    self.cursor_position += 1;
-                }
-            }
-        }
-    }
-}
-
-pub struct App<'a> {
-    pub search_box: SearchBox,
-    file: &'a UnicodeFile,
-    search_selection: SearchSelection,
-    pub results: Vec<&'a UnicodeData>,
-}
-
-impl<'a> App<'a> {
-    pub fn new(file: &'a UnicodeFile) -> App<'a> {
-        App {
-            search_box: SearchBox::new(),
-            file,
-            search_selection: SearchSelection::new(),
-            results: vec![],
+            self.cursor_position = self.input.len() - before_cursor.len();
         }
     }
 
@@ -134,7 +110,7 @@ impl<'a> App<'a> {
         let mut user_input = self.input.clone();
         user_input.insert(self.cursor_position, '▏');
         user_input
-    } 
+    }
 
     pub fn move_cursor(&mut self, direction: CursorMove) {
         match direction {
@@ -150,7 +126,6 @@ impl<'a> App<'a> {
             }
         }
     }
-
 }
 
 pub struct App<'a> {
