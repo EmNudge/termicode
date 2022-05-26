@@ -854,6 +854,7 @@ dependencies = [
  "reqwest",
  "tokio",
  "tui",
+ "unicode-segmentation",
  "unicode-width",
 ]
 

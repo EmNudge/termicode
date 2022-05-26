@@ -1,6 +1,7 @@
 use crate::data::{UnicodeData, UnicodeFile};
 use crate::query::query_name;
 use tui::widgets::ListState;
+use unicode_segmentation::UnicodeSegmentation;
 
 enum SelectionMove {
     UP,
@@ -75,34 +76,20 @@ impl SearchBox {
     }
     pub fn delete_word(&mut self) {
         if self.input.len() > 0 {
-            let mut iter = self.input.chars().rev().enumerate().peekable();
+            // credit to jotch#7627
+            // keep text after cursor as is
+            let (before_cursor, after_cursor) = self.input.split_at(self.cursor_position);
 
-            // save all characters after our cursor
-            let mut before_cursor = String::new();
-            while let Some((i, c)) = iter.peek() {
-                if self.input.len() - 1 - i < self.cursor_position {
-                    break;
-                }
-                before_cursor.push(*c);
-                iter.next().unwrap();
-            }
+            // remove whitespace then delete word
+            let before_delete = before_cursor
+                .trim_end_matches(' ')
+                .split_word_bound_indices()
+                .next_back()
+                .map(|(i, _)| &before_cursor[..i])
+                .unwrap_or_default();
 
-            let deleted_part = iter
-                .map(|(_, c)| c)
-                // if whitespace before cursor, delete all of it
-                .skip_while(|c| *c == ' ')
-                // delete until we approach the next whitespace
-                .skip_while(|c| *c != ' ');
-
-            self.input = before_cursor
-                .chars()
-                .chain(deleted_part)
-                .collect::<String>()
-                .chars()
-                .rev()
-                .collect::<String>();
-
-            self.cursor_position = self.input.len() - before_cursor.len();
+            self.cursor_position = before_delete.len();
+            self.input = before_delete.to_owned() + after_cursor;;
         }
     }
 
