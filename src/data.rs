@@ -12,9 +12,7 @@ pub async fn get_unicode_data() -> Result<String, Box<dyn std::error::Error>> {
     if let Ok(bytes) = fs::read(&temp_dir).await {
         return Ok(String::from_utf8_lossy(&bytes).to_string());
     }
-
-    println!("Updating cache...");
-
+    
     let unicode_data = reqwest::get("https://unicode.org/Public/UNIDATA/UnicodeData.txt")
         .await?
         .text()

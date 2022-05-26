@@ -1,7 +1,7 @@
 mod app;
-use app::App;
+use app::{App, CursorMove};
 
-use crate::data::{ UnicodeFile, UnicodeData };
+use crate::data::{UnicodeData, UnicodeFile};
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -39,7 +39,7 @@ fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             )
             .split(chunks[0]);
 
-        let search_box = Paragraph::new(app.input.as_ref())
+        let search_box = Paragraph::new(app.search_box.get_rendered_input())
             .block(Block::default().borders(Borders::ALL).title("Search Box"));
 
         let options_block = Paragraph::new(" None for now...")
@@ -74,9 +74,9 @@ fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                     pad_char(' ', 4 - symbol_len)
                 };
                 let codepoint_right_padding = {
-                    if unicode_data.codepoint < 0xffff { "  " } else { " " };
-                    let num_len = (f64::log2(unicode_data.codepoint as f64 + 1.0)/f64::log2(16.0)).ceil();
-                    
+                    let num_len =
+                        (f64::log2(unicode_data.codepoint as f64 + 1.0) / f64::log2(16.0)).ceil();
+
                     pad_char(' ', 6 - num_len as usize)
                 };
 
@@ -114,14 +114,16 @@ fn draw_with_listener<B: Backend>(
                     return Ok(app.get_selection().map(|data| data.clone()));
                 }
                 KeyCode::Char(c) => {
-                    app.add_char(c);
+                    app.search_box.add_char(c);
+                    app.update_query();
                 }
                 KeyCode::Backspace => {
                     if key.modifiers.contains(KeyModifiers::ALT) {
-                        app.delete_word();
+                        app.search_box.delete_word();
                     } else {
-                        app.delete_char();
+                        app.search_box.delete_char();
                     }
+                    app.update_query();
                 }
                 KeyCode::Down => {
                     app.selection_down();
@@ -129,15 +131,19 @@ fn draw_with_listener<B: Backend>(
                 KeyCode::Up => {
                     app.selection_up();
                 }
+                KeyCode::Right => {
+                    app.search_box.move_cursor(CursorMove::RIGHT);
+                }
+                KeyCode::Left => {
+                    app.search_box.move_cursor(CursorMove::LEFT);
+                }
                 _ => {}
             }
         }
     }
 }
 
-pub fn create_interface(
-    data: &UnicodeFile
-) -> Result<Option<UnicodeData>, std::io::Error> {
+pub fn create_interface(data: &UnicodeFile) -> Result<Option<UnicodeData>, std::io::Error> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();

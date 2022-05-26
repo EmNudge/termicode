@@ -1,33 +1,41 @@
-use tui::widgets::ListState;
-use crate::data::{ UnicodeFile, UnicodeData };
+use crate::data::{UnicodeData, UnicodeFile};
 use crate::query::query_name;
+use tui::widgets::ListState;
+use unicode_segmentation::UnicodeSegmentation;
 
 enum SelectionMove {
     UP,
     DOWN,
 }
-struct SearchSelection {
+pub struct SearchSelection {
     list_state: ListState,
 }
 
 impl SearchSelection {
     pub fn new() -> SearchSelection {
-        SearchSelection { list_state: ListState::default() }
+        SearchSelection {
+            list_state: ListState::default(),
+        }
     }
-    pub fn selection_move(&mut self, results: &Vec<&UnicodeData>, direction: SelectionMove) {
+    fn selection_move(&mut self, results: &Vec<&UnicodeData>, direction: SelectionMove) {
         let len = results.len();
         if len == 0 {
             return;
         }
 
-        self.list_state
-            .select(match self.list_state.selected() {
-                Some(i) => Some(match direction {
-                    SelectionMove::DOWN => if i == len - 1 { 0 } else { i + 1 },
-                    SelectionMove::UP => i.checked_sub(1).unwrap_or(len - 1),
-                }),
-                None => Some(0),
-            });
+        self.list_state.select(match self.list_state.selected() {
+            Some(i) => Some(match direction {
+                SelectionMove::DOWN => {
+                    if i == len - 1 {
+                        0
+                    } else {
+                        i + 1
+                    }
+                }
+                SelectionMove::UP => i.checked_sub(1).unwrap_or(len - 1),
+            }),
+            None => Some(0),
+        });
     }
     pub fn get_selection<'a>(&self, results: &Vec<&'a UnicodeData>) -> Option<&'a UnicodeData> {
         let len = results.len();
@@ -40,8 +48,75 @@ impl SearchSelection {
     }
 }
 
-pub struct App<'a> {
+pub enum CursorMove {
+    LEFT,
+    RIGHT,
+}
+pub struct SearchBox {
     pub input: String,
+    pub cursor_position: usize,
+}
+impl SearchBox {
+    pub fn new() -> SearchBox {
+        SearchBox {
+            input: String::new(),
+            cursor_position: 0,
+        }
+    }
+
+    pub fn add_char(&mut self, c: char) {
+        self.input.insert(self.cursor_position, c);
+        self.cursor_position += 1;
+    }
+    pub fn delete_char(&mut self) {
+        if self.input.len() > 0 {
+            self.input.remove(self.cursor_position - 1);
+            self.cursor_position -= 1;
+        }
+    }
+    pub fn delete_word(&mut self) {
+        if self.input.len() > 0 {
+            // credit to jotch#7627
+            // keep text after cursor as is
+            let (before_cursor, after_cursor) = self.input.split_at(self.cursor_position);
+
+            // remove whitespace then delete word
+            let before_delete = before_cursor
+                .trim_end_matches(' ')
+                .split_word_bound_indices()
+                .next_back()
+                .map(|(i, _)| &before_cursor[..i])
+                .unwrap_or_default();
+
+            self.cursor_position = before_delete.len();
+            self.input = before_delete.to_owned() + after_cursor;;
+        }
+    }
+
+    pub fn get_rendered_input(&self) -> String {
+        let mut user_input = self.input.clone();
+        user_input.insert(self.cursor_position, '▏');
+        user_input
+    }
+
+    pub fn move_cursor(&mut self, direction: CursorMove) {
+        match direction {
+            CursorMove::LEFT => {
+                if self.cursor_position > 0 {
+                    self.cursor_position -= 1;
+                }
+            }
+            CursorMove::RIGHT => {
+                if self.cursor_position < self.input.len() {
+                    self.cursor_position += 1;
+                }
+            }
+        }
+    }
+}
+
+pub struct App<'a> {
+    pub search_box: SearchBox,
     file: &'a UnicodeFile,
     search_selection: SearchSelection,
     pub results: Vec<&'a UnicodeData>,
@@ -50,41 +125,26 @@ pub struct App<'a> {
 impl<'a> App<'a> {
     pub fn new(file: &'a UnicodeFile) -> App<'a> {
         App {
-            input: String::new(),
+            search_box: SearchBox::new(),
             file,
             search_selection: SearchSelection::new(),
             results: vec![],
         }
     }
 
-    pub fn add_char(&mut self, c: char) {
-        self.input.push(c);
-        self.update_query();
-    }
-    pub fn delete_char(&mut self) {
-        self.input.pop();
-        self.update_query();
-    }
-    pub fn delete_word(&mut self) {
-        while let Some(_letter) = self.input.pop() {
-            let last_char = self.input.chars().last();
-            if let Some(letter) = last_char {
-                if letter == ' ' {
-                    break;
-                }
-            }
-        }
-    }
-
     pub fn update_query(&mut self) {
-        self.results = query_name(self.input.clone(), self.file).take(20).collect();
+        self.results = query_name(self.search_box.input.clone(), self.file)
+            .take(20)
+            .collect();
     }
 
     pub fn selection_up(&mut self) {
-        self.search_selection.selection_move(&self.results, SelectionMove::UP);
+        self.search_selection
+            .selection_move(&self.results, SelectionMove::UP);
     }
     pub fn selection_down(&mut self) {
-        self.search_selection.selection_move(&self.results, SelectionMove::DOWN);
+        self.search_selection
+            .selection_move(&self.results, SelectionMove::DOWN);
     }
     pub fn get_selection(&'a self) -> Option<&'a UnicodeData> {
         self.search_selection.get_selection(&self.results)
