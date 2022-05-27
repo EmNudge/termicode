@@ -89,7 +89,7 @@ impl SearchBox {
                 .unwrap_or_default();
 
             self.cursor_position = before_delete.len();
-            self.input = before_delete.to_owned() + after_cursor;;
+            self.input = before_delete.to_owned() + after_cursor;
         }
     }
 

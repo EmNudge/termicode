@@ -35,9 +35,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         
         if pargs.contains("--copy") {
-            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-            
-            ctx.set_contents(symbol.to_string()).unwrap();
+            let ctx_result: Result<ClipboardContext, Box<dyn std::error::Error>> = ClipboardProvider::new();
+            match ctx_result {
+                Ok(mut ctx) => {
+                    ctx.set_contents(symbol.to_string()).unwrap();
+                }
+                Err(_) => {
+                    println!("Error: Could not copy to clipboard on this system.")
+                }
+            }
         }
     }
 
