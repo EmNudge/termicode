@@ -4,8 +4,8 @@ use tui::widgets::ListState;
 use unicode_segmentation::UnicodeSegmentation;
 
 enum SelectionMove {
-    UP,
-    DOWN,
+    Up,
+    Down,
 }
 pub struct SearchSelection {
     list_state: ListState,
@@ -18,39 +18,39 @@ impl SearchSelection {
         }
     }
     fn selection_move(&mut self, results: &Vec<&UnicodeData>, direction: SelectionMove) {
-        let len = results.len();
-        if len == 0 {
+        if results.is_empty() {
             return;
         }
 
+        let len = results.len();
+
         self.list_state.select(match self.list_state.selected() {
             Some(i) => Some(match direction {
-                SelectionMove::DOWN => {
+                SelectionMove::Down => {
                     if i == len - 1 {
                         0
                     } else {
                         i + 1
                     }
                 }
-                SelectionMove::UP => i.checked_sub(1).unwrap_or(len - 1),
+                SelectionMove::Up => i.checked_sub(1).unwrap_or(len - 1),
             }),
             None => Some(0),
         });
     }
     pub fn get_selection<'a>(&self, results: &Vec<&'a UnicodeData>) -> Option<&'a UnicodeData> {
-        let len = results.len();
-        if len == 0 {
+        if results.is_empty() {
             return None;
         }
 
         let index = self.list_state.selected().unwrap_or(0);
-        return Some(&results.get(index).unwrap());
+        return Some(results.get(index).unwrap());
     }
 }
 
 pub enum CursorMove {
-    LEFT,
-    RIGHT,
+    Left,
+    Right,
 }
 pub struct SearchBox {
     pub input: String,
@@ -69,13 +69,13 @@ impl SearchBox {
         self.cursor_position += 1;
     }
     pub fn delete_char(&mut self) {
-        if self.input.len() > 0 {
+        if !self.input.is_empty() {
             self.input.remove(self.cursor_position - 1);
             self.cursor_position -= 1;
         }
     }
     pub fn delete_word(&mut self) {
-        if self.input.len() > 0 {
+        if !self.input.is_empty() {
             // credit to jotch#7627
             // keep text after cursor as is
             let (before_cursor, after_cursor) = self.input.split_at(self.cursor_position);
@@ -101,12 +101,12 @@ impl SearchBox {
 
     pub fn move_cursor(&mut self, direction: CursorMove) {
         match direction {
-            CursorMove::LEFT => {
+            CursorMove::Left => {
                 if self.cursor_position > 0 {
                     self.cursor_position -= 1;
                 }
             }
-            CursorMove::RIGHT => {
+            CursorMove::Right => {
                 if self.cursor_position < self.input.len() {
                     self.cursor_position += 1;
                 }
@@ -140,11 +140,11 @@ impl<'a> App<'a> {
 
     pub fn selection_up(&mut self) {
         self.search_selection
-            .selection_move(&self.results, SelectionMove::UP);
+            .selection_move(&self.results, SelectionMove::Up);
     }
     pub fn selection_down(&mut self) {
         self.search_selection
-            .selection_move(&self.results, SelectionMove::DOWN);
+            .selection_move(&self.results, SelectionMove::Down);
     }
     pub fn get_selection(&'a self) -> Option<&'a UnicodeData> {
         self.search_selection.get_selection(&self.results)
