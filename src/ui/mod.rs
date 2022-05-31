@@ -111,7 +111,7 @@ fn draw_with_listener<B: Backend>(
             match key.code {
                 KeyCode::Esc => return Ok(None),
                 KeyCode::Enter => {
-                    return Ok(app.get_selection().map(|data| data.clone()));
+                    return Ok(app.get_selection().cloned());
                 }
                 KeyCode::Char(c) => {
                     app.search_box.add_char(c);
@@ -132,10 +132,10 @@ fn draw_with_listener<B: Backend>(
                     app.selection_up();
                 }
                 KeyCode::Right => {
-                    app.search_box.move_cursor(CursorMove::RIGHT);
+                    app.search_box.move_cursor(CursorMove::Right);
                 }
                 KeyCode::Left => {
-                    app.search_box.move_cursor(CursorMove::LEFT);
+                    app.search_box.move_cursor(CursorMove::Left);
                 }
                 _ => {}
             }

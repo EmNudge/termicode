@@ -35,7 +35,6 @@ pub fn query_name<'a>(
             return Box::new(
                 get_unicode_items(unicode_file)
                     .filter(move |character_data| user_regex.is_match(&character_data.name))
-                    .map(|character_data| character_data),
             );
         }
     }
@@ -43,6 +42,5 @@ pub fn query_name<'a>(
     Box::new(
         get_unicode_items(unicode_file)
             .filter(move |character_data| (*character_data).name.contains(&name.to_uppercase()))
-            .map(|character_data| character_data),
     )
 }
