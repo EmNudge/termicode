@@ -34,13 +34,13 @@ pub fn query_name<'a>(
         if let Ok(user_regex) = Regex::new(user_regex_str) {
             return Box::new(
                 get_unicode_items(unicode_file)
-                    .filter(move |character_data| user_regex.is_match(&character_data.name))
+                    .filter(move |character_data| user_regex.is_match(&character_data.name)),
             );
         }
     }
 
     Box::new(
         get_unicode_items(unicode_file)
-            .filter(move |character_data| (*character_data).name.contains(&name.to_uppercase()))
+            .filter(move |character_data| (*character_data).name.contains(&name.to_uppercase())),
     )
 }

@@ -8,11 +8,11 @@ pub async fn get_unicode_data() -> Result<String, Box<dyn std::error::Error>> {
     let mut temp_dir = env::temp_dir();
     temp_dir.push("termicode");
     temp_dir.push("data.txt");
-    
+
     if let Ok(bytes) = fs::read(&temp_dir).await {
         return Ok(String::from_utf8_lossy(&bytes).to_string());
     }
-    
+
     let unicode_data = reqwest::get("https://unicode.org/Public/UNIDATA/UnicodeData.txt")
         .await?
         .text()
@@ -38,7 +38,8 @@ pub struct UnicodeData {
 }
 
 fn get_codepoint_gaps(data: &str) -> Vec<(u32, u32)> {
-    let nums = data.split('\n')
+    let nums = data
+        .split('\n')
         .filter(|line| !line.is_empty())
         .map(|line| line.split(';').next().unwrap());
 
@@ -64,7 +65,8 @@ pub struct UnicodeFile {
 pub fn parse_unicode_data(data: &str) -> UnicodeFile {
     let gaps = get_codepoint_gaps(data);
 
-    let map = data.split('\n')
+    let map = data
+        .split('\n')
         .into_iter()
         .filter(|line| !line.is_empty())
         .map(|line| {
@@ -75,7 +77,14 @@ pub fn parse_unicode_data(data: &str) -> UnicodeFile {
             let name = data.next().unwrap().to_owned();
             let category = data.next().unwrap().to_owned();
 
-            (codepoint, UnicodeData { codepoint, name, category })
+            (
+                codepoint,
+                UnicodeData {
+                    codepoint,
+                    name,
+                    category,
+                },
+            )
         })
         .collect();
 

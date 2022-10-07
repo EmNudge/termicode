@@ -1,4 +1,6 @@
 mod app;
+mod focus_controller;
+
 use app::{App, CursorMove};
 
 use crate::data::{UnicodeData, UnicodeFile};
